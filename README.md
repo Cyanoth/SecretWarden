@@ -1,12 +1,12 @@
 # SecretWarden for Bitbucket Server
 
-A custom Bitbucket Server plugin, (Data Center compatible) to scan source-code for common passwords & secrets. 
 
 The plugin includes a Merge Check option which can prevent secrets from being merged into a repository except by a Repository Administrator. 
 Details about the found secrets will be displayed on the pull-request overview tab.
 
-Secrets are found using Regular Expressions. The plugin includes a configuration page for Global Administrators whom can edit the default ruleset
-or even add custom rules.
+Secrets are found using Regular Expressions. The plugin includes a configuration page for Global Administrators whom can edit the default ruleset or even add custom rules.
+
+A custom Bitbucket Server plugin, (Data Center compatible) to scan source-code for common passwords & secrets.
 
 
 ## Getting Started
@@ -36,7 +36,3 @@ You can enable debug logging on this plugin by going the following URL:
 ```curl -u <user>:<password> -v -X PUT -H "Content-Type: application/json" http://<bitbucket_url>:7990/rest/api/latest/logs/logger/com.cyanoth.secretwarden/debug```
 
 This change will apply to every-node in the cluster automatically, the log files will sho debug messages.
-
-## Known Issues
-* There is no delete for custom/default rules - but you can always disable them
-* After adding a rule to the configuration table, the page must be reloaded.

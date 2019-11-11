@@ -1,18 +1,21 @@
-package com.cyanoth.secretwarden.pullrequest;
+package com.cyanoth.secretwarden.scanners.pullrequest;
 
 import com.atlassian.bitbucket.concurrent.LockService;
 import com.atlassian.bitbucket.pull.PullRequest;
 import com.atlassian.bitbucket.pull.PullRequestService;
-import com.cyanoth.secretwarden.collections.MatchRuleSet;
 import com.cyanoth.secretwarden.SecretScanException;
 import com.cyanoth.secretwarden.SecretScanStatus;
 import com.cyanoth.secretwarden.SecretScanner;
-import com.cyanoth.secretwarden.config.MatchRuleSetCache;
+import com.cyanoth.secretwarden.config.ExcludedPathEntity;
+import com.cyanoth.secretwarden.config.MatchRuleEntity;
+import com.cyanoth.secretwarden.config.PluginConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.concurrent.locks.Lock;
+import java.util.regex.Pattern;
 
 /**
  * Take a pull request from Bitbucket and handle the flow of a secret scan, including returning results.
@@ -20,21 +23,21 @@ import java.util.concurrent.locks.Lock;
 public class PullRequestSecretScanner implements SecretScanner {
     private static final Logger log = LoggerFactory.getLogger(PullRequestSecretScanner.class);
     private final PullRequestSecretScanResultCache pullRequestSecretScanCache;
-    private final MatchRuleSetCache matchRuleSetCache;
     private final LockService lockService;
     private final PullRequestService pullRequestService;
     private final PullRequest pullRequest;
+    private final PluginConfig pluginConfig;
 
     PullRequestSecretScanner(PullRequestService service,
                              PullRequest pullRequest,
                              LockService lockService,
-                             PullRequestSecretScanResultCache pullRequestSecretScanCache,
-                             MatchRuleSetCache matchRuleSetCache) {
+                             PluginConfig pluginConfig,
+                             PullRequestSecretScanResultCache pullRequestSecretScanCache) {
         this.pullRequestService = service;
         this.pullRequest = pullRequest;
         this.pullRequestSecretScanCache = pullRequestSecretScanCache;
-        this.matchRuleSetCache = matchRuleSetCache;
         this.lockService = lockService;
+        this.pluginConfig = pluginConfig;
     }
 
     /**
@@ -114,9 +117,22 @@ public class PullRequestSecretScanner implements SecretScanner {
         scanResult.setSecretScanStatus(SecretScanStatus.IN_PROGRESS);
         pullRequestSecretScanCache.put(pullRequest, scanResult);
 
-        MatchRuleSet matchRuleSet = matchRuleSetCache.getRuleSet(); // Load once for entirety of the scan
+        // Compile the regex patterns now so they are used for the entirety of this scan.
+        HashMap<MatchRuleEntity, Pattern> matchRules = new HashMap<>();
+        for (MatchRuleEntity matchRuleEntity : pluginConfig.getMatchRuleDao().getAllRules()) {
+            if (!matchRuleEntity.isRuleEnabled())
+                continue;
 
-        scanResult.setFoundSecrets(new ChangeStreamer(pullRequestService, matchRuleSet).scan(pullRequest).getFoundSecrets());
+            matchRules.put(matchRuleEntity, Pattern.compile(matchRuleEntity.getRegexPattern(), Pattern.CASE_INSENSITIVE));
+        }
+
+
+        HashMap<ExcludedPathEntity, Pattern> excludedPaths = new HashMap<>();
+        for (ExcludedPathEntity excludedPathEntity : pluginConfig.getExcludePathDao().getAllExcludedPaths()) {
+            excludedPaths.put(excludedPathEntity, Pattern.compile(excludedPathEntity.getExcludedPath(), Pattern.CASE_INSENSITIVE));
+        }
+
+        scanResult.setFoundSecrets(new ChangeStreamer(pullRequestService, matchRules, excludedPaths).scan(pullRequest).getFoundSecrets());
         scanResult.setSecretScanStatus(SecretScanStatus.COMPLETED);
         pullRequestSecretScanCache.put(pullRequest, scanResult);
 

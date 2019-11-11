@@ -1,32 +1,42 @@
-package com.cyanoth.secretwarden.pullrequest;
+package com.cyanoth.secretwarden.scanners.pullrequest;
 
 import com.atlassian.bitbucket.content.AbstractChangeCallback;
 import com.atlassian.bitbucket.content.Change;
 import com.atlassian.bitbucket.content.ChangeType;
 import com.atlassian.bitbucket.pull.*;
-import com.cyanoth.secretwarden.collections.FoundSecretCollection;
-import com.cyanoth.secretwarden.collections.MatchRuleSet;
+import com.cyanoth.secretwarden.config.ExcludedPathEntity;
+import com.cyanoth.secretwarden.config.MatchRuleEntity;
+import com.cyanoth.secretwarden.structures.FoundSecretCollection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  * INTERNAL! Class which streams differences (think different files) of a pull request before passing that information onto DiffMatcher
  */
 class ChangeStreamer {
+    private static final Logger log = LoggerFactory.getLogger(ChangeStreamer.class);
+
     private final PullRequestService pullRequestService;
     private final FoundSecretCollection totalFoundSecrets;
-    private final MatchRuleSet matchRuleSet;
+    private final HashMap<MatchRuleEntity, Pattern> matchRules;
+    private final HashMap<ExcludedPathEntity, Pattern> excludedPaths;
 
     /**
      * INTERNAL! Class which streams differences (think different files) of a pull request before passing that information onto DiffMatcher
      * @param pullRequestService Initialised Bitbucket PullRequestService for PR operations (stream)
-     * @param matchRuleSet Collection of rules to find secrets in text.
      */
-    ChangeStreamer(PullRequestService pullRequestService, MatchRuleSet matchRuleSet) {
+    ChangeStreamer(PullRequestService pullRequestService,
+                   HashMap<MatchRuleEntity, Pattern> matchRuleSet,
+                   HashMap<ExcludedPathEntity, Pattern> excludedPaths) {
         this.pullRequestService = pullRequestService;
-        totalFoundSecrets = new FoundSecretCollection();
-        this.matchRuleSet = matchRuleSet;
+        this.matchRules = matchRuleSet;
+        this.excludedPaths = excludedPaths;
+        this.totalFoundSecrets = new FoundSecretCollection();
     }
 
     /**
@@ -57,7 +67,18 @@ class ChangeStreamer {
             @Override
             public boolean onChange(@Nonnull Change change) {
                 if (change.getType() == ChangeType.ADD || change.getType() == ChangeType.MODIFY) {
-                    totalFoundSecrets.merge(scanChangedFileDifferencesForSecrets(pullRequest, change.getPath().toString()));
+
+                    boolean shouldScan = true;
+
+                    for (Pattern excludedPath : excludedPaths.values()) {
+                        if (excludedPath.matcher(change.getPath().toString()).find()) {
+                            log.debug(String.format("Skipping scan of the file: %s because it matches an excluded path!", change.getPath().toString()));
+                            shouldScan = false;
+                        }
+                    }
+
+                    if (shouldScan)
+                        totalFoundSecrets.merge(scanChangedFileDifferencesForSecrets(pullRequest, change.getPath().toString()));
                 }
                 return true; // _Really_ do not care about this value, but its super() requires returning something
             }
@@ -70,7 +91,7 @@ class ChangeStreamer {
                 .withComments(false)
                 .build();
 
-        final DiffMatcher matchSecretCallback = new DiffMatcher(matchRuleSet);
+        final DiffMatcher matchSecretCallback = new DiffMatcher(matchRules);
         pullRequestService.streamDiff(fileDifference, matchSecretCallback);
         return matchSecretCallback.getFoundSecrets();
     }

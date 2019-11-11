@@ -1,4 +1,4 @@
-package com.cyanoth.secretwarden.pullrequest;
+package com.cyanoth.secretwarden.scanners.pullrequest;
 
 import com.atlassian.bitbucket.concurrent.LockService;
 import com.atlassian.bitbucket.hook.repository.*;
@@ -10,7 +10,7 @@ import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 
 import com.cyanoth.secretwarden.SecretScanException;
-import com.cyanoth.secretwarden.config.MatchRuleSetCache;
+import com.cyanoth.secretwarden.config.PluginConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,20 +29,20 @@ public class HasSecretMergeCheck implements RepositoryMergeCheck {
     private final PermissionService permissionService;
     private final PullRequestService pullRequestService;
     private final LockService lockService;
+    private final PluginConfig pluginConfig;
     private final PullRequestSecretScanResultCache pullRequestSecretScanResultCache;
-    private final MatchRuleSetCache matchRuleSetCache;
 
     @Autowired
     public HasSecretMergeCheck(@ComponentImport PermissionService permissionService,
                                @ComponentImport PullRequestService pullRequestService,
                                @ComponentImport LockService lockService,
                                PullRequestSecretScanResultCache pullRequestSecretScanResultCache,
-                               MatchRuleSetCache matchRuleSetCache) {
+                               PluginConfig pluginConfig) {
         this.permissionService = permissionService;
         this.pullRequestService = pullRequestService;
         this.lockService = lockService;
         this.pullRequestSecretScanResultCache = pullRequestSecretScanResultCache;
-        this.matchRuleSetCache = matchRuleSetCache;
+        this.pluginConfig = pluginConfig;
     }
 
     @Nonnull
@@ -55,7 +55,7 @@ public class HasSecretMergeCheck implements RepositoryMergeCheck {
             final Repository repository = pullRequest.getToRef().getRepository();
 
             PullRequestSecretScanResult pullRequestScan = new PullRequestSecretScanner(pullRequestService, pullRequest,
-                    lockService, pullRequestSecretScanResultCache, matchRuleSetCache).scan(false);
+                    lockService, pluginConfig, pullRequestSecretScanResultCache).scan(false);
 
             int secretCount = pullRequestScan.countFoundSecrets();
             if (secretCount > 0) {

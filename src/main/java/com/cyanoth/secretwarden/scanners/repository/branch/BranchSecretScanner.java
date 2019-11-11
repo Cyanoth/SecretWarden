@@ -1,4 +1,4 @@
-package com.cyanoth.secretwarden.repository.branch;
+package com.cyanoth.secretwarden.scanners.repository.branch;
 
 import com.cyanoth.secretwarden.SecretScanException;
 import com.cyanoth.secretwarden.SecretScanResult;

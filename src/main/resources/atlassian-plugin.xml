@@ -81,4 +81,11 @@
         <description>Secret Warden REST Resources</description>
     </rest>
 
+    <ao key="ao-module">
+        <description>SecretWarden Active Object for Global Plugin Configuration(s)</description>
+        <entity>com.cyanoth.secretwarden.config.PluginConfigEntity</entity>
+        <entity>com.cyanoth.secretwarden.config.MatchRuleEntity</entity>
+        <entity>com.cyanoth.secretwarden.config.ExcludedPathEntity</entity>
+    </ao>
+
 </atlassian-plugin>

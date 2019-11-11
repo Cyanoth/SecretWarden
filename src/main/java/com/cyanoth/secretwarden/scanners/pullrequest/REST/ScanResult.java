@@ -1,4 +1,4 @@
-package com.cyanoth.secretwarden.pullrequest.REST;
+package com.cyanoth.secretwarden.scanners.pullrequest.REST;
 
 import com.atlassian.bitbucket.AuthorisationException;
 import com.atlassian.bitbucket.permission.Permission;
@@ -7,8 +7,8 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
 import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
-import com.cyanoth.secretwarden.pullrequest.PullRequestSecretScanResult;
-import com.cyanoth.secretwarden.pullrequest.PullRequestSecretScanResultCache;
+import com.cyanoth.secretwarden.scanners.pullrequest.PullRequestSecretScanResult;
+import com.cyanoth.secretwarden.scanners.pullrequest.PullRequestSecretScanResultCache;
 import com.google.gson.Gson;
 
 import javax.ws.rs.GET;

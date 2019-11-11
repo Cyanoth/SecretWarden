@@ -19,12 +19,19 @@ define('SecretWarden/GlobalConfig', [
             invokeClearCache();
         });
 
-        $(document).on('click', '#secretwarden-reloadruleset-button', function (e) {
-            invokeReloadRuleSet();
-        });
-
         buildMatchRulesetTable();
+        buildExcludePathTable();
+        setReloadHandler();
     };
+
+
+    function setReloadHandler() {
+        AJS.$(document).bind(AJS.RestfulTable.Events.EDIT_ROW, function (event,editedRow,table) {
+            editedRow.bind(AJS.RestfulTable.Events.UPDATED, function () {
+                invokeFullReload();
+            });
+        });
+    }
 
     function invokeClearCache() {
         var selectButton = $("#secretwarden-clearcache-button");
@@ -102,18 +109,18 @@ define('SecretWarden/GlobalConfig', [
     function buildMatchRulesetTable() {
         console.log("Building the MatchSecretRule RESTful table...");
 
-        var restTable = new AJS.RestfulTable({
+        var ruleSetTable = new AJS.RestfulTable({
             el: jQuery("#match-rule-config-table"),
             autoFocus: true,
-            allowDelete: false, // DELETE Not yet implemented
+            allowDelete: true,
             resources: {
                 all: AJS.contextPath() + "/rest/secretwarden/1.0/globalconfig/match-secret-rule",
                 self: AJS.contextPath() + "/rest/secretwarden/1.0/globalconfig/match-secret-rule"
             },
             columns: [
                 {
-                    id: "ruleNumber",
-                    header: "Rule Number",
+                    id: "id",
+                    header: "id",
                     allowEdit: false
                 },
                 {
@@ -134,27 +141,51 @@ define('SecretWarden/GlobalConfig', [
             ]
         });
 
-
-        AJS.$(document).bind(AJS.RestfulTable.Events.EDIT_ROW, function (event,editedRow,table) {
-            // Need to do this until we find a way to reliably reload & return the newly created rule ID back to the client.
-            editedRow.bind(AJS.RestfulTable.Events.UPDATED, function () {
-                invokeFullReload();
-            });
-        });
-
-        restTable.getCreateRow().bind(AJS.RestfulTable.Events.CREATED, function () {
-            // Need to do this until we find a way to reliably reload & return the newly created rule ID back to the client.
+        ruleSetTable.getCreateRow().bind(AJS.RestfulTable.Events.CREATED, function () {
             invokeFullReload();
         });
 
-        restTable.getCreateRow().bind(AJS.RestfulTable.Events.VALIDATION_ERROR, function () {
+        ruleSetTable.getCreateRow().bind(AJS.RestfulTable.Events.VALIDATION_ERROR, function () {
             showFailureFlag();
         });
-
     }
 
+
+     function buildExcludePathTable() {
+            console.log("Building the Exclude Path RESTful table...");
+
+            var excludePathTable = new AJS.RestfulTable({
+                el: jQuery("#exclude-path-config-table"),
+                autoFocus: true,
+                allowDelete: true,
+                resources: {
+                    all: AJS.contextPath() + "/rest/secretwarden/1.0/globalconfig/excluded-path",
+                    self: AJS.contextPath() + "/rest/secretwarden/1.0/globalconfig/excluded-path"
+                },
+                columns: [
+                    {
+                        id: "id",
+                        header: "id",
+                        allowEdit: false
+                    },
+                    {
+                        id: "excludedPath",
+                        header: "Excluded Path"
+                    }
+                ]
+            });
+
+            excludePathTable.getCreateRow().bind(AJS.RestfulTable.Events.CREATED, function () {
+                invokeFullReload();
+            });
+
+            excludePathTable.getCreateRow().bind(AJS.RestfulTable.Events.VALIDATION_ERROR, function () {
+                showFailureFlag();
+            });
+        }
+
+
     function invokeFullReload() {
-        invokeReloadRuleSet();
         invokeClearCache();
         location.reload();
     }
@@ -167,36 +198,6 @@ define('SecretWarden/GlobalConfig', [
             body: 'Failed to create or update a rule because of a server error. Please ensure you entry meets validation requirements ' +
                 'or check server-logs for further information!'
         });
-    }
-
-    function invokeReloadRuleSet() {
-        var selectButton = $("#secretwarden-reloadruleset-button");
-
-        server.rest({
-            url: navbuilder.rest("secretwarden").addPathComponents("globalconfig", "reload-ruleset").build(),
-            type: 'PUT',
-            async: false,
-            complete: function(jqXHR) {
-                if (jqXHR.status === 200) {
-                    AJS.flag({
-                        type: 'success',
-                        title: 'Success!',
-                        persistent: false,
-                        body: 'SecretWarden ruleset has reloaded successfully!'
-                    });
-                } else {
-                    AJS.flag({
-                        type: 'error',
-                        title: 'Failed!',
-                        persistent: false,
-                        body: 'SecretWarden ruleset reload has failed! The old ruleset still applies. Please check console / server-logs for more information'
-                    });
-                    console.log("SecretWarden ruleset reload has failed! The old ruleset still applies. Status: " + jqXHR.status);
-                }
-                selectButton.attr("aria-disabled", "false");
-            }
-        });
-
     }
 
 });

@@ -1,16 +1,19 @@
-package com.cyanoth.secretwarden.pullrequest;
+package com.cyanoth.secretwarden.scanners.pullrequest;
 
 import com.atlassian.bitbucket.content.AbstractDiffContentCallback;
 import com.atlassian.bitbucket.content.ConflictMarker;
 import com.atlassian.bitbucket.content.DiffSegmentType;
 import com.atlassian.bitbucket.content.Path;
-import com.cyanoth.secretwarden.collections.FoundSecretCollection;
-import com.cyanoth.secretwarden.collections.MatchRuleSet;
+import com.cyanoth.secretwarden.config.MatchRuleEntity;
+import com.cyanoth.secretwarden.structures.FoundSecretCollection;
 import com.cyanoth.secretwarden.structures.FoundSecret;
-import com.cyanoth.secretwarden.structures.MatchRule;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * INTERNAL: Finds & collect secrets that match rules in the ruleset in a given hunk of changes.
@@ -28,7 +31,7 @@ import javax.annotation.Nullable;
  */
 class DiffMatcher extends AbstractDiffContentCallback {
     private final FoundSecretCollection foundSecrets = new FoundSecretCollection();
-    private final MatchRuleSet matchRuleSet;
+    private final HashMap<MatchRuleEntity, Pattern> matchRuleSet;
 
     private boolean flagScanSegment= false;
 
@@ -43,7 +46,7 @@ class DiffMatcher extends AbstractDiffContentCallback {
      * INTERNAL: Finds & collect secrets that match rules in the ruleset in a given hunk of changes.
      * @param matchRuleSet Collection of rules to find secrets in text.
      */
-    DiffMatcher(MatchRuleSet matchRuleSet) {
+    DiffMatcher(HashMap<MatchRuleEntity, Pattern>  matchRuleSet) {
         this.matchRuleSet = matchRuleSet;
     }
 
@@ -72,12 +75,9 @@ class DiffMatcher extends AbstractDiffContentCallback {
         if (!flagScanSegment || conflictMarker != null) // Don't scan this code segment if preconditions for a scan is false or in conflict.
             return;
 
-        for (MatchRule rule : matchRuleSet.getAllRules()) {
-            if (!rule.getIsEnabled())
-                continue;
-
-            if (rule.checkMatch(s)) {
-                foundSecrets.add(new FoundSecret(rule.getFriendlyName(), destinationFilePath,
+        for (Map.Entry<MatchRuleEntity, Pattern> rule : matchRuleSet.entrySet()) {
+            if (rule.getValue().matcher(s).find()) {
+                foundSecrets.add(new FoundSecret(rule.getKey().getFriendlyName(), destinationFilePath,
                         sourceContext, lineCounter));
             }
         }

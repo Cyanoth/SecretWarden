@@ -1,4 +1,4 @@
-package com.cyanoth.secretwarden.pullrequest;
+package com.cyanoth.secretwarden.scanners.pullrequest;
 
 import com.atlassian.bitbucket.pull.PullRequest;
 import com.atlassian.cache.Cache;

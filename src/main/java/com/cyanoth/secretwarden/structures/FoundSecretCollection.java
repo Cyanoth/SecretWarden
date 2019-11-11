@@ -1,6 +1,4 @@
-package com.cyanoth.secretwarden.collections;
-
-import com.cyanoth.secretwarden.structures.FoundSecret;
+package com.cyanoth.secretwarden.structures;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;

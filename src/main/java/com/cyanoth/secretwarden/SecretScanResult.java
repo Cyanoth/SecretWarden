@@ -1,6 +1,6 @@
 package com.cyanoth.secretwarden;
 
-import com.cyanoth.secretwarden.collections.FoundSecretCollection;
+import com.cyanoth.secretwarden.structures.FoundSecretCollection;
 
 import java.io.Serializable;
 
